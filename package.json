@@ -1,0 +1,65 @@
+{
+  "name": "testaustime",
+  "displayName": "TestausTime",
+  "version": "0.0.1",
+  "description": "The VSCode extension of TestausTime",
+  "main": "src/index.js",
+  "publisher": "testausserveri-ry",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Testausserveri/testaustime-vscode.git"
+  },
+  "keywords": [
+    "testaustime"
+  ],
+  "scripts": {
+    "test": "npm run lint",
+    "lint": "eslint src/"
+  },
+  "engines": {
+    "vscode": "^1.55.0"
+  },
+  "contributors": [
+    "Antti <antti@antti.codes>",
+    "raikasdev"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Testausserveri/testaustime-vscode/issues"
+  },
+  "homepage": "https://time.testausserveri.fi",
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:testaustime.test",
+    "onCommand:testaustime.setapikey",
+    "onCommand:testaustime.setendpoint"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "testaustime.test",
+        "title": "TestausTime: Sanity Check"
+      },
+      {
+        "command": "testaustime.setapikey",
+        "title": "TestausTime: Set API key"
+      },
+      {
+        "command": "testaustime.setendpoint",
+        "title": "TestausTime: Set custom API endpoint"
+      }
+    ]
+  },
+  "dependencies": {
+    "axios": "^0.21.1"
+  },
+  "devDependencies": {
+    "eslint": "^7.25.0",
+    "eslint-config-airbnb": "^18.2.1",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.22.1",
+    "vscode": "^1.1.37"
+  }
+}
