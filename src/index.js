@@ -34,7 +34,6 @@ function sendHeartbeat(context, data) {
     const config = context.globalState;
     const apikey = config.get('apikey'); // eslint-disable-line no-unused-vars
     const endpoint = config.get('endpoint', 'https://time.lajp.fi');
-    vscode.window.showInformationMessage(JSON.stringify(data));
     axios.post(`${endpoint}/activity/update`,
         data,
         {
@@ -56,7 +55,7 @@ function activate(context) {
 
     // Must be defined in package.json
     const test = vscode.commands.registerCommand('testaustime.test', () => {
-        vscode.window.showInformationMessage('Testaustime active!');
+        vscode.window.showInformationMessage(JSON.stringify(getData()));
     });
 
     const setapikey = vscode.commands.registerCommand('testaustime.setapikey', async () => {
