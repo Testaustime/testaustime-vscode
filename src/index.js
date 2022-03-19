@@ -1,108 +1,143 @@
 const vscode = require('vscode'); // eslint-disable-line import/no-unresolved
 const axios = require('axios');
-const os = require('os');
+const { hostname } = require('os');
 
-class Heartbeat {
-    constructor(projectName, language, editorName, hostname) {
-        this.project_name = projectName;
-        this.language = language;
-        this.editor_name = editorName;
-        this.hostname = hostname;
+
+class Testaustime {
+    /**
+    * @param {vscode.ExtensionContext} context
+    */
+    constructor(context) {
+        this.context = context;
+        this.config = context.globalState;
+        this.apikey = "";
+        this.endpoint = "";
+        this.interval = 0;
     }
 
-    toJSON() {
+    /**
+     * 
+     * @returns {object}
+     */
+    data() {
         return {
-            project_name: this.project_name,
-            language: this.language,
-            editor_name: this.editor_name,
-            hostname: this.hostname,
-        };
+            project_name: vscode.workspace.name,
+            language: vscode.window.activeTextEditor ? vscode.window.activeTextEditor.document.languageId : '',
+            editor_name: "vscode",
+            hostname: hostname(),
+        }
+    }
+
+    heartbeat() {
+        axios.post(`${this.endpoint}/activity/update`,
+            this.data(),
+            {
+                headers: {
+                    Authorization: `Bearer ${this.apikey}`,
+                },
+            });
+    }
+
+    flush() {
+        axios.post(`${this.endpoint}/activity/flush`, "", {
+            headers: {
+                "Authorization": `Bearer ${this.apikey}`
+            }
+        });
+    }
+
+    /**
+     * @returns {boolean}
+     */
+    async validateApikey() {
+        const result = await axios.get(`${this.endpoint}/users/@me`, {
+            headers: {
+                "Authorization": `Bearer ${this.apikey}`
+            }
+        });
+
+        return result.status === 200 ? true : false;
+    }
+
+    async commands() {
+        const test = vscode.commands.registerCommand('testaustime.test', () => {
+            vscode.window.showInformationMessage(JSON.stringify(this.data()));
+        });
+
+        const setapikey = vscode.commands.registerCommand('testaustime.setapikey', async () => {
+            const result = await vscode.window.showInputBox({
+                placeHolder: 'Your API-key',
+            });
+
+            if (!result) return;
+
+            vscode.window.showInformationMessage('Testing API-key...');
+
+            const isValid = await this.validateApikey();
+
+            if (!isValid) {
+                vscode.window.showInformationMessage('API key invalid');
+                return;
+            }
+
+            this.config.update('apikey', result);
+            this.apikey = result;
+
+            vscode.window.showInformationMessage('API key set!');
+        });
+
+        const setcustomapi = vscode.commands.registerCommand('testaustime.setendpoint', async () => {
+            const result = await vscode.window.showInputBox({
+                placeHolder: this.endpoint,
+                validateInput: (text) => (text.endsWith('/') ? 'Don\'t include the last slash' : null),
+            });
+
+            if (!result || result.endsWith('/')) return;
+
+            this.config.update('endpoint', result);
+            this.endpoint = result;
+
+            vscode.window.showInformationMessage('Endpoint key set!');
+        });
+
+        this.context.subscriptions.push(test);
+        this.context.subscriptions.push(setapikey);
+        this.context.subscriptions.push(setcustomapi);
+    }
+
+    activate() {
+        this.apikey = this.config.get("apikey");
+        this.endpoint = this.config.get("endpoint", "https://time.lajp.fi");
+        this.commands();
+
+        if (!this.validateApikey()) {
+            vscode.window.showErrorMessage('API key invalid!');
+        }
+
+        this.interval = setInterval(() => {
+            if (!vscode.window.state.focused && this.apikey) {
+                this.flush();
+                return;
+            }
+
+            this.heartbeat();
+        }, 20000);
+    }
+
+    deactivate() {
+        clearInterval(this.interval);
+        this.flush();
     }
 }
 
-function getData() {
-    return new Heartbeat(
-        vscode.workspace.name,
-        vscode.window.activeTextEditor ? vscode.window.activeTextEditor.document.languageId : '',
-        'vscode',
-        os.hostname(),
-    );
-}
 
-function sendHeartbeat(context, data) {
-    if (!data.language) return;
-    const config = context.globalState;
-    const apikey = config.get('apikey'); // eslint-disable-line no-unused-vars
-    const endpoint = config.get('endpoint', 'https://time.lajp.fi');
-    axios.post(`${endpoint}/activity/update`,
-        data,
-        {
-            headers: {
-                Authorization: `Bearer ${apikey}`,
-            },
-        });
-}
-
-/**
- * @param {vscode.ExtensionContext} context
- */
+let testaustime;
 function activate(context) {
-    const config = context.globalState;
-    let apikey = config.get('apikey'); // eslint-disable-line no-unused-vars
-    let endpoint = config.get('endpoint', 'https://time.lajp.fi');
-    // Called when activated
-    console.log('Testaustime activated!');
-
-    // Must be defined in package.json
-    const test = vscode.commands.registerCommand('testaustime.test', () => {
-        vscode.window.showInformationMessage(JSON.stringify(getData()));
-    });
-
-    const setapikey = vscode.commands.registerCommand('testaustime.setapikey', async () => {
-        const result = await vscode.window.showInputBox({
-            placeHolder: 'Your API-key',
-        });
-        if (!result) return;
-        vscode.window.showInformationMessage('Testing API-key...');
-        axios.post(`${endpoint}/activity/update`, getData(), {
-            headers: {
-                Authorization: `Bearer ${result}`,
-            },
-        })
-            .then(() => {
-                config.update('apikey', result);
-                apikey = config.get('apikey');
-                vscode.window.showInformationMessage('API key set!');
-            })
-            .catch(() => {
-                vscode.window.showInformationMessage('API key invalid');
-            });
-    });
-
-    const setcustomapi = vscode.commands.registerCommand('testaustime.setendpoint', async () => {
-        const result = await vscode.window.showInputBox({
-            placeHolder: 'https://time.lajp.fi',
-            validateInput: (text) => (text.endsWith('/') ? 'Don\'t include the last slash' : null),
-        });
-        if (!result || result.endsWith('/')) return;
-        config.update('endpoint', result);
-        endpoint = config.get('endpoint');
-        vscode.window.showInformationMessage('Endpoint key set!');
-    });
-
-    context.subscriptions.push(test);
-    context.subscriptions.push(setapikey);
-    context.subscriptions.push(setcustomapi);
-
-    setInterval(() => {
-        if (apikey && vscode.window.state.focused) {
-            sendHeartbeat(context, getData());
-        }
-    }, 30000);
+    testaustime = new Testaustime(context);
+    testaustime.activate();
 }
-
 function deactivate() {
-    // Called when deactivated
+    testaustime.deactivate();
 }
 
 module.exports = {
