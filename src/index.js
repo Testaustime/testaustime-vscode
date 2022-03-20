@@ -48,56 +48,55 @@ class Testaustime {
 
     /**
      * @returns {boolean}
+     * @param {string} key
      */
-    async validateApikey() {
+    async validateApikey(key) {
         const result = await axios.get(`${this.endpoint}/users/@me`, {
             headers: {
-                "Authorization": `Bearer ${this.apikey}`
+                "Authorization": `Bearer ${key}`
             }
         });
 
         return result.status === 200 ? true : false;
     }
 
-    async commands() {
+    commands() {
         const test = vscode.commands.registerCommand('testaustime.test', () => {
             vscode.window.showInformationMessage(JSON.stringify(this.data()));
         });
 
         const setapikey = vscode.commands.registerCommand('testaustime.setapikey', async () => {
-            const result = await vscode.window.showInputBox({
+            await vscode.window.showInputBox({
                 placeHolder: 'Your API-key',
+
+            }).then(async (result) => {
+                if (result) {
+                    vscode.window.showInformationMessage('Testing API-key...');
+                    const isValid = await this.validateApikey(result);
+
+                    if (!isValid) {
+                        vscode.window.showInformationMessage('API key invalid');
+                        return;
+                    }
+
+                    this.apikey = result;
+                    this.config.update('apikey', result);
+                    vscode.window.showInformationMessage('API key set!');
+                }
             });
-
-            if (!result) return;
-
-            vscode.window.showInformationMessage('Testing API-key...');
-
-            const isValid = await this.validateApikey();
-
-            if (!isValid) {
-                vscode.window.showInformationMessage('API key invalid');
-                return;
-            }
-
-            this.config.update('apikey', result);
-            this.apikey = result;
-
-            vscode.window.showInformationMessage('API key set!');
         });
 
         const setcustomapi = vscode.commands.registerCommand('testaustime.setendpoint', async () => {
-            const result = await vscode.window.showInputBox({
+            await vscode.window.showInputBox({
                 placeHolder: this.endpoint,
                 validateInput: (text) => (text.endsWith('/') ? 'Don\'t include the last slash' : null),
-            });
-
-            if (!result || result.endsWith('/')) return;
-
-            this.config.update('endpoint', result);
-            this.endpoint = result;
-
-            vscode.window.showInformationMessage('Endpoint key set!');
+            }).then((result) => {
+                if (result) {
+                    this.endpoint = result;
+                    this.config.update('endpoint', result);
+                    vscode.window.showInformationMessage('Endpoint key set!');
+                }
+            })
         });
 
         this.context.subscriptions.push(test);
@@ -110,17 +109,19 @@ class Testaustime {
         this.endpoint = this.config.get("endpoint", "https://time.lajp.fi");
         this.commands();
 
-        if (!this.validateApikey()) {
+        if (!this.validateApikey(this.apikey)) {
             vscode.window.showErrorMessage('API key invalid!');
         }
 
         this.interval = setInterval(() => {
-            if (!vscode.window.state.focused && this.apikey) {
-                this.flush();
-                return;
-            }
+            if (this.apikey) {
+                if (!vscode.window.state.focused) {
+                    this.flush();
+                    return;
+                }
 
-            this.heartbeat();
+                this.heartbeat();
+            }
         }, 20000);
     }
 
