@@ -9,6 +9,7 @@ class Testaustime {
     config: vscode.Memento;
     interval!: NodeJS.Timeout;
     context: vscode.ExtensionContext;
+    statusbar!: vscode.StatusBarItem;
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
@@ -17,6 +18,20 @@ class Testaustime {
         this.apikey = this.config.get("apikey", "");
         this.endpoint = this.config.get("endpoint", "https://time.lajp.fi");
     }
+
+
+    //statusbar
+    setApikeyInvalidText() {
+        this.statusbar.text = "TestausTime: API key invalid!";
+        this.statusbar.command = "testaustime.setapikey"
+    }
+
+    setActiveText() {
+        this.statusbar.text = "TestausTime: active";
+        this.statusbar.command = undefined;
+    }
+
+    //end statusbar
 
     data(): object {
         return {
@@ -49,9 +64,6 @@ class Testaustime {
                 Authorization: `Bearer ${key}`
             }
         }).then(() => true).catch(() => false);
-
-        return true;
-        //return result.status === 200;
     }
 
     commands() {
@@ -61,15 +73,15 @@ class Testaustime {
 
             }).then(async (result) => {
                 if (result) {
-                    vscode.window.showInformationMessage('Testing API-key...');
                     const isValid: boolean = await this.validateApikey(result);
 
                     if (!isValid) {
-                        vscode.window.showInformationMessage('API key invalid');
+                        this.setApikeyInvalidText();
                         return;
                     }
 
                     this.apikey = result;
+                    this.setActiveText();
                     this.apikeyValid = true;
                     this.config.update('apikey', result);
                     vscode.window.showInformationMessage('API key set!');
@@ -96,17 +108,19 @@ class Testaustime {
 
     async activate() {
         this.commands();
+
+        this.statusbar = vscode.window.createStatusBarItem();
+        this.setActiveText();
+        this.statusbar.show();
+
         if (!await this.validateApikey(this.apikey)) {
             this.apikeyValid = false;
-            vscode.window.showErrorMessage('API key invalid!');
+            this.setApikeyInvalidText();
         }
-
-        console.log('Testaustime activated!');
 
         this.interval = setInterval(() => {
             if (this.apikeyValid) {
                 if (!vscode.window.state.focused) return;
-
                 this.heartbeat();
             }
         }, 20000);
@@ -114,6 +128,7 @@ class Testaustime {
 
     deactivate() {
         clearInterval(this.interval);
+        if (!this.apikeyValid) return;
         this.flush();
     }
 }
