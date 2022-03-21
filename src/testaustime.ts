@@ -5,6 +5,7 @@ import * as os from "os";
 class Testaustime {
     apikey!: string;
     endpoint!: string;
+    apikeyValid!: boolean;
     config: vscode.Memento;
     interval!: NodeJS.Timeout;
     context: vscode.ExtensionContext;
@@ -43,13 +44,14 @@ class Testaustime {
     }
 
     async validateApikey(key: string): Promise<boolean> {
-        const result = await axios.get(`${this.endpoint}/users/@me`, {
+        return await axios.get(`${this.endpoint}/users/@me`, {
             headers: {
                 Authorization: `Bearer ${key}`
             }
-        });
+        }).then(() => true).catch(() => false);
 
-        return result.status === 200 ? true : false;
+        return true;
+        //return result.status === 200;
     }
 
     commands() {
@@ -68,6 +70,7 @@ class Testaustime {
                     }
 
                     this.apikey = result;
+                    this.apikeyValid = true;
                     this.config.update('apikey', result);
                     vscode.window.showInformationMessage('API key set!');
                 }
@@ -91,20 +94,18 @@ class Testaustime {
         this.context.subscriptions.push(setendpoint);
     }
 
-    activate() {
+    async activate() {
         this.commands();
-        if (!this.validateApikey(this.apikey)) {
+        if (!await this.validateApikey(this.apikey)) {
+            this.apikeyValid = false;
             vscode.window.showErrorMessage('API key invalid!');
         }
 
         console.log('Testaustime activated!');
 
         this.interval = setInterval(() => {
-            if (this.apikey) {
-                if (!vscode.window.state.focused) {
-                    this.flush();
-                    return;
-                }
+            if (this.apikeyValid) {
+                if (!vscode.window.state.focused) return;
 
                 this.heartbeat();
             }
