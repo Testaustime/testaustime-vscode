@@ -1,59 +1,51 @@
-const vscode = require('vscode'); // eslint-disable-line import/no-unresolved
-const axios = require('axios');
-const { hostname } = require('os');
-
+import * as vscode from "vscode";
+import axios from "axios";
+import * as os from "os";
 
 class Testaustime {
-    /**
-    * @param {vscode.ExtensionContext} context
-    */
-    constructor(context) {
+    apikey!: string;
+    endpoint!: string;
+    config: vscode.Memento;
+    interval!: NodeJS.Timeout;
+    context: vscode.ExtensionContext;
+
+    constructor(context: vscode.ExtensionContext) {
         this.context = context;
         this.config = context.globalState;
-        this.apikey = "";
-        this.endpoint = "";
-        this.interval = 0;
+
+        this.apikey = this.config.get("apikey", "");
+        this.endpoint = this.config.get("endpoint", "https://time.lajp.fi");
     }
 
-    /**
-     * 
-     * @returns {object}
-     */
-    data() {
+    data(): object {
         return {
             project_name: vscode.workspace.name,
             language: vscode.window.activeTextEditor ? vscode.window.activeTextEditor.document.languageId : '',
             editor_name: "vscode",
-            hostname: hostname(),
+            hostname: os.hostname(),
         }
     }
 
     heartbeat() {
-        axios.post(`${this.endpoint}/activity/update`,
-            this.data(),
-            {
-                headers: {
-                    Authorization: `Bearer ${this.apikey}`,
-                },
-            });
+        axios.post(`${this.endpoint}/activity/update`, this.data(), {
+            headers: {
+                Authorization: `Bearer ${this.apikey}`,
+            },
+        });
     }
 
     flush() {
         axios.post(`${this.endpoint}/activity/flush`, "", {
             headers: {
-                "Authorization": `Bearer ${this.apikey}`
+                Authorization: `Bearer ${this.apikey}`
             }
         });
     }
 
-    /**
-     * @returns {boolean}
-     * @param {string} key
-     */
-    async validateApikey(key) {
+    async validateApikey(key: string): Promise<boolean> {
         const result = await axios.get(`${this.endpoint}/users/@me`, {
             headers: {
-                "Authorization": `Bearer ${key}`
+                Authorization: `Bearer ${key}`
             }
         });
 
@@ -61,10 +53,6 @@ class Testaustime {
     }
 
     commands() {
-        const test = vscode.commands.registerCommand('testaustime.test', () => {
-            vscode.window.showInformationMessage(JSON.stringify(this.data()));
-        });
-
         const setapikey = vscode.commands.registerCommand('testaustime.setapikey', async () => {
             await vscode.window.showInputBox({
                 placeHolder: 'Your API-key',
@@ -72,7 +60,7 @@ class Testaustime {
             }).then(async (result) => {
                 if (result) {
                     vscode.window.showInformationMessage('Testing API-key...');
-                    const isValid = await this.validateApikey(result);
+                    const isValid: boolean = await this.validateApikey(result);
 
                     if (!isValid) {
                         vscode.window.showInformationMessage('API key invalid');
@@ -86,7 +74,7 @@ class Testaustime {
             });
         });
 
-        const setcustomapi = vscode.commands.registerCommand('testaustime.setendpoint', async () => {
+        const setendpoint = vscode.commands.registerCommand('testaustime.setendpoint', async () => {
             await vscode.window.showInputBox({
                 placeHolder: this.endpoint,
                 validateInput: (text) => (text.endsWith('/') ? 'Don\'t include the last slash' : null),
@@ -99,19 +87,17 @@ class Testaustime {
             })
         });
 
-        this.context.subscriptions.push(test);
         this.context.subscriptions.push(setapikey);
-        this.context.subscriptions.push(setcustomapi);
+        this.context.subscriptions.push(setendpoint);
     }
 
     activate() {
-        this.apikey = this.config.get("apikey");
-        this.endpoint = this.config.get("endpoint", "https://time.lajp.fi");
         this.commands();
-
         if (!this.validateApikey(this.apikey)) {
             vscode.window.showErrorMessage('API key invalid!');
         }
+
+        console.log('Testaustime activated!');
 
         this.interval = setInterval(() => {
             if (this.apikey) {
@@ -131,17 +117,4 @@ class Testaustime {
     }
 }
 
-
-let testaustime;
-function activate(context) {
-    testaustime = new Testaustime(context);
-    testaustime.activate();
-}
-function deactivate() {
-    testaustime.deactivate();
-}
-
-module.exports = {
-    activate,
-    deactivate,
-};
+export default Testaustime;
