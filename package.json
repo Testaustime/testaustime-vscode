@@ -22,7 +22,7 @@
     "test": "node ./out/test/runTest.js"
   },
   "engines": {
-    "vscode": "^1.55.0"
+    "vscode": "^1.65.0"
   },
   "contributors": [
     "Antti <antti@antti.codes>",
