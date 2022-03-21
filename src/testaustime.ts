@@ -5,9 +5,9 @@ import * as os from "os";
 class Testaustime {
     apikey!: string;
     endpoint!: string;
-    apikeyValid!: boolean;
     config: vscode.Memento;
     interval!: NodeJS.Timeout;
+    apikeyValid: boolean = true;
     context: vscode.ExtensionContext;
     statusbar!: vscode.StatusBarItem;
 
