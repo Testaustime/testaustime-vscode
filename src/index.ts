@@ -1,9 +1,9 @@
-import * as vscode from "vscode";
+import { ExtensionContext } from "vscode";
 import Testaustime from "./testaustime";
 
 
 let testaustime: Testaustime;
-function activate(context: vscode.ExtensionContext) {
+function activate(context: ExtensionContext) {
     testaustime = new Testaustime(context);
     testaustime.activate();
 }

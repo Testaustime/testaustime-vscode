@@ -16,21 +16,20 @@ class Testaustime {
         this.config = context.globalState;
 
         this.apikey = this.config.get("apikey", "");
-        this.endpoint = this.config.get("endpoint", "https://time.lajp.fi");
+        this.endpoint = this.config.get("endpoint", "https://api.testaustime.fi");
     }
 
 
     //statusbar
     setApikeyInvalidText() {
         this.statusbar.text = "TestausTime: API key invalid!";
-        this.statusbar.command = "testaustime.setapikey"
+        this.statusbar.command = "testaustime.setapikey";
     }
 
     setActiveText() {
         this.statusbar.text = "TestausTime: active";
         this.statusbar.command = undefined;
     }
-
     //end statusbar
 
     data(): object {
