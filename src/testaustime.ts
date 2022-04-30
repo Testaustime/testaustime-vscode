@@ -27,7 +27,7 @@ class Testaustime {
     }
 
     setActiveText() {
-        this.statusbar.text = "TestausTime: active";
+        this.statusbar.text = "TestausTime: ✅";
         this.statusbar.command = undefined;
     }
     //end statusbar
@@ -91,14 +91,16 @@ class Testaustime {
         const setendpoint = vscode.commands.registerCommand('testaustime.setendpoint', async () => {
             await vscode.window.showInputBox({
                 placeHolder: this.endpoint,
-                validateInput: (text) => (text.endsWith('/') ? 'Don\'t include the last slash' : null),
             }).then((result) => {
                 if (result) {
+                    if (result.endsWith('/')) {
+                        result = result.slice(0, -1);
+                    }
                     this.endpoint = result;
                     this.config.update('endpoint', result);
                     vscode.window.showInformationMessage('Endpoint key set!');
                 }
-            })
+            });
         });
 
         this.context.subscriptions.push(setapikey);
@@ -108,7 +110,7 @@ class Testaustime {
     async activate() {
         this.commands();
 
-        this.statusbar = vscode.window.createStatusBarItem();
+        this.statusbar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
         this.setActiveText();
         this.statusbar.show();
 
