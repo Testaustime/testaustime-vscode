@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 import axios from "axios";
 import * as os from "os";
+import { prettyDuration } from "./utils/timeUtils";
+import { startOfToday } from "date-fns";
 
 class Testaustime {
     apikey!: string;
@@ -27,7 +29,21 @@ class Testaustime {
     }
 
     setActiveText() {
-        this.statusbar.text = "TestausTime: ✅";
+        const start = startOfToday().getTime() / 1000 - new Date().getTimezoneOffset() * 60;
+
+        // Returns other properties in addition to duration, but this is all we need for now
+        axios.get<{ duration: number }[]>(`${this.endpoint}/users/@me/activity/data?from=${start}`, {
+            headers: {
+                Authorization: `Bearer ${this.apikey}`,
+            },
+        }).then(response => {
+            const totalSeconds = response.data.reduce((acc, cur) => acc + cur.duration, 0);
+            this.statusbar.tooltip = `You have coded ${prettyDuration(totalSeconds)} today`;
+            this.statusbar.text = `TestausTime: ${prettyDuration(totalSeconds)} ✅`;
+        }).catch(() => {
+            this.statusbar.text = "TestausTime: Error";
+        });
+
         this.statusbar.command = undefined;
     }
     //end statusbar
