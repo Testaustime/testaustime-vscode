@@ -44,7 +44,6 @@ class Testaustime {
             this.statusbar.text = "Testaustime: Error";
         });
         
-        this.statusbar.text = "Testaustime: ✅";
         this.statusbar.command = undefined;
     }
     //end statusbar
