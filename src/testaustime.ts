@@ -24,7 +24,7 @@ class Testaustime {
 
     //statusbar
     setApikeyInvalidText() {
-        this.statusbar.text = "TestausTime: API key invalid!";
+        this.statusbar.text = "Testaustime: API key invalid!";
         this.statusbar.command = "testaustime.setapikey";
     }
 
@@ -39,11 +39,12 @@ class Testaustime {
         }).then(response => {
             const totalSeconds = response.data.reduce((acc, cur) => acc + cur.duration, 0);
             this.statusbar.tooltip = `You have coded ${prettyDuration(totalSeconds)} today`;
-            this.statusbar.text = `TestausTime: ${prettyDuration(totalSeconds)} ✅`;
+            this.statusbar.text = `Testaustime: ${prettyDuration(totalSeconds)} ✅`;
         }).catch(() => {
-            this.statusbar.text = "TestausTime: Error";
+            this.statusbar.text = "Testaustime: Error";
         });
-
+        
+        this.statusbar.text = "Testaustime: ✅";
         this.statusbar.command = undefined;
     }
     //end statusbar
