@@ -22,12 +22,12 @@ class Testaustime {
 
     //statusbar
     setApikeyInvalidText() {
-        this.statusbar.text = "TestausTime: API key invalid!";
+        this.statusbar.text = "Testaustime: API key invalid!";
         this.statusbar.command = "testaustime.setapikey";
     }
 
     setActiveText() {
-        this.statusbar.text = "TestausTime: ✅";
+        this.statusbar.text = "Testaustime: ✅";
         this.statusbar.command = undefined;
     }
     //end statusbar
