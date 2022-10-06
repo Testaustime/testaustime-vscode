@@ -43,10 +43,6 @@
   "contributes": {
     "commands": [
       {
-        "command": "testaustime.test",
-        "title": "Testaustime: Sanity Check"
-      },
-      {
         "command": "testaustime.setapikey",
         "title": "Testaustime: Set API key"
       },
