@@ -1,37 +1,39 @@
 import * as vscode from "vscode";
 import axios from "axios";
 import * as os from "os";
-import { prettyDuration } from "./utils/timeUtils";
 import { startOfToday } from "date-fns";
+import { prettyDuration } from "./utils/timeUtils";
+import { createHash } from "crypto";
+
+type Pointer = `${number},${number}`;
 
 class Testaustime {
     apikey!: string;
-    endpoint!: string;
-    config: vscode.Memento;
+    endpoint: string;
+    config: vscode.WorkspaceConfiguration;
     interval!: NodeJS.Timeout;
     apikeyValid: boolean = true;
     context: vscode.ExtensionContext;
     statusbar!: vscode.StatusBarItem;
+    pointer: Pointer = "0,0";
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
-        this.config = context.globalState;
+        this.config = vscode.workspace.getConfiguration("testaustime");
 
-        this.apikey = this.config.get("apikey", "");
-        this.endpoint = this.config.get("endpoint", "https://api.testaustime.fi");
+        this.endpoint = this.config.get<string>("apiEndpoint", "https://api.testaustime.fi");
     }
 
-
-    //statusbar
     setApikeyInvalidText() {
         this.statusbar.text = "Testaustime: API key invalid!";
         this.statusbar.command = "testaustime.setapikey";
     }
 
     setActiveText() {
+        if (!this.apikeyValid) return;
+
         const start = startOfToday().getTime() / 1000 - new Date().getTimezoneOffset() * 60;
 
-        // Returns other properties in addition to duration, but this is all we need for now
         axios.get<{ duration: number }[]>(`${this.endpoint}/users/@me/activity/data?from=${start}`, {
             headers: {
                 Authorization: `Bearer ${this.apikey}`,
@@ -46,31 +48,36 @@ class Testaustime {
         
         this.statusbar.command = undefined;
     }
-    //end statusbar
 
-    data(): object {
+    data() {
+        const hidden = this.config.get<string[]>("hiddenPaths", []);
+        const hide = vscode.workspace.workspaceFolders?.some((f) =>
+           hidden.some((p) => f.uri.fsPath.startsWith(p))
+        ) ?? false;
         return {
-            project_name: vscode.workspace.name,
-            language: vscode.window.activeTextEditor ? vscode.window.activeTextEditor.document.languageId : '',
+            project_name: hide ? `hidden-${
+                createHash("sha256").update(vscode.workspace.name ?? "No workspace").digest("hex").slice(0, 7)
+            }` : (vscode.workspace.name ?? "No workspace"),
+            language: vscode.window.activeTextEditor ? vscode.window.activeTextEditor.document.languageId : "",
             editor_name: "vscode",
             hostname: os.hostname(),
         }
     }
 
-    heartbeat() {
-        axios.post(`${this.endpoint}/activity/update`, this.data(), {
+    async heartbeat() {
+        await axios.post(`${this.endpoint}/activity/update`, this.data(), {
             headers: {
                 Authorization: `Bearer ${this.apikey}`,
             },
-        });
+        }).catch(() => null);
     }
 
-    flush() {
-        axios.post(`${this.endpoint}/activity/flush`, "", {
+    async flush() {
+        await axios.post(`${this.endpoint}/activity/flush`, "", {
             headers: {
                 Authorization: `Bearer ${this.apikey}`
             }
-        });
+        }).catch(() => null);
     }
 
     async validateApikey(key: string): Promise<boolean> {
@@ -82,71 +89,60 @@ class Testaustime {
     }
 
     commands() {
-        const setapikey = vscode.commands.registerCommand('testaustime.setapikey', async () => {
-            await vscode.window.showInputBox({
-                placeHolder: 'Your API-key',
-
-            }).then(async (result) => {
-                if (result) {
-                    const isValid: boolean = await this.validateApikey(result);
-
-                    if (!isValid) {
-                        this.setApikeyInvalidText();
-                        return;
-                    }
-
-                    this.apikey = result;
-                    this.setActiveText();
-                    this.apikeyValid = true;
-                    this.config.update('apikey', result);
-                    vscode.window.showInformationMessage('API key set!');
-                }
+        const setapikey = vscode.commands.registerCommand("testaustime.setapikey", async () => {
+            const result = await vscode.window.showInputBox({
+                placeHolder: "Your API key from https://testaustime.fi/profile",
+                password: true,
             });
-        });
 
-        const setendpoint = vscode.commands.registerCommand('testaustime.setendpoint', async () => {
-            await vscode.window.showInputBox({
-                placeHolder: this.endpoint,
-            }).then((result) => {
-                if (result) {
-                    if (result.endsWith('/')) {
-                        result = result.slice(0, -1);
-                    }
-                    this.endpoint = result;
-                    this.config.update('endpoint', result);
-                    vscode.window.showInformationMessage('Endpoint key set!');
+            if (result) {
+                const isValid = await this.validateApikey(result);
+
+                if (!isValid) {
+                    this.setApikeyInvalidText();
+                    vscode.window.showErrorMessage("Invalid API key!");
+                    return;
                 }
-            });
+
+                this.apikey = result;
+                this.apikeyValid = true;
+                this.setActiveText();
+                this.context.secrets.store("apiKey", result);
+                vscode.window.showInformationMessage("API key set!");
+            }
         });
 
         this.context.subscriptions.push(setapikey);
-        this.context.subscriptions.push(setendpoint);
     }
 
     async activate() {
+        this.apikey = await this.context.secrets.get("apiKey") ?? "";
+
         this.commands();
 
         this.statusbar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
         this.setActiveText();
-        this.statusbar.show();
 
-        if (!await this.validateApikey(this.apikey)) {
+        if (!(await this.validateApikey(this.apikey))) {
             this.apikeyValid = false;
             this.setApikeyInvalidText();
         }
 
+        this.statusbar.show();
+
         this.interval = setInterval(() => {
-            if (this.apikeyValid) {
-                if (!vscode.window.state.focused) return;
-                this.heartbeat();
-            }
-        }, 20000);
+            if (this.config.get<boolean>("disabled", false) || !this.apikeyValid || !vscode.window.activeTextEditor) return;
+            const pointerpos = vscode.window.activeTextEditor.selection.active;
+            const newPointer: Pointer = `${pointerpos.line},${pointerpos.character}`;
+            if (!vscode.window.state.focused || newPointer === this.pointer) return;
+            this.pointer = newPointer;
+            this.heartbeat();
+        }, 30_000);
     }
 
-    deactivate() {
+    async deactivate() {
         clearInterval(this.interval);
-        if (!this.apikeyValid) return;
-        this.flush();
+        if (this.apikeyValid) await this.flush();
     }
 }
 
