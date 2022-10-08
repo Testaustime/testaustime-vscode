@@ -14,14 +14,18 @@
     "testaustime"
   ],
   "scripts": {
-    "vscode:prepublish": "yarn build",
-    "build": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "yarn --ignore-engines build-base --minify",
+    "build-base": "esbuild ./src/index.ts --bundle --outfile=dist/index.js --external:vscode --format=cjs --platform=node",
+    "build": "yarn --ignore-engines build-base --sourcemap",
+    "watch": "yarn --ignore-engines build-base --sourcemap --watch",
     "lint": "eslint src --ext ts",
-    "bundle": "yarn vsce package"
+    "bundle": "yarn --ignore-engines vsce package"
   },
   "engines": {
     "vscode": "^1.71.0"
+  },
+  "vsce": {
+    "useYarn": true
   },
   "contributors": [
     "Antti <antti@antti.codes>",
@@ -79,6 +83,7 @@
     "@types/vscode": "^1.65.0",
     "@typescript-eslint/eslint-plugin": "^5.12.1",
     "@typescript-eslint/parser": "^5.12.1",
+    "esbuild": "^0.15.10",
     "eslint": "^8.9.0",
     "typescript": "^4.5.5",
     "vsce": "^2.11.0"
