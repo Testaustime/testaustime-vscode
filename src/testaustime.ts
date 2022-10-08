@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import axios from "axios";
 import * as os from "os";
-import { startOfToday } from "date-fns";
+import startOfToday from "date-fns/startOfToday";
 import { prettyDuration } from "./utils/timeUtils";
 import { createHash } from "crypto";
 
