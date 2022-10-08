@@ -1,7 +1,7 @@
 {
   "name": "testaustime",
   "displayName": "Testaustime",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "The VSCode extension of Testaustime",
   "main": "dist/index.js",
   "publisher": "testausserveri-ry",
