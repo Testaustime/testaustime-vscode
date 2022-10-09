@@ -19,7 +19,7 @@
     "build": "yarn --ignore-engines build-base --sourcemap",
     "watch": "yarn --ignore-engines build-base --sourcemap --watch",
     "lint": "eslint src --ext ts",
-    "bundle": "yarn --ignore-engines vsce package",
+    "bundle": "vsce package",
     "deploy": "vsce publish"
   },
   "engines": {
