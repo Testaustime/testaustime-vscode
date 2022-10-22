@@ -107,7 +107,7 @@ class Testaustime {
                 this.apikey = result;
                 this.apikeyValid = true;
                 this.setActiveText();
-                this.context.secrets.store("apiKey", result);
+                this.context.globalState.update("apikey", result);
                 vscode.window.showInformationMessage("API key set!");
             }
         });
@@ -116,7 +116,7 @@ class Testaustime {
     }
 
     async activate() {
-        this.apikey = await this.context.secrets.get("apiKey") ?? "";
+        this.apikey = this.context.globalState.get("apikey") ?? "";
 
         this.commands();
 
