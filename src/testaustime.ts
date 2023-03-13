@@ -137,6 +137,7 @@ class Testaustime {
             if (!vscode.window.state.focused || newPointer === this.pointer) return;
             this.pointer = newPointer;
             this.heartbeat();
+            this.setActiveText();
         }, 30_000);
     }
 
