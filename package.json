@@ -1,7 +1,7 @@
 {
   "name": "testaustime",
   "displayName": "Testaustime",
-  "version": "0.0.13",
+  "version": "0.1.0",
   "description": "The VSCode extension of Testaustime",
   "main": "dist/index.js",
   "publisher": "testausserveri-ry",
@@ -49,6 +49,10 @@
       {
         "command": "testaustime.setapikey",
         "title": "Testaustime: Set API key"
+      },
+      {
+        "command": "testaustime.openauthorize",
+        "title": "Testaustime: Log in using testaustime.fi"
       }
     ],
     "configuration": {

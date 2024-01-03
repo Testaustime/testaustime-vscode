@@ -7,8 +7,22 @@ import { createHash } from "crypto";
 
 type Pointer = `${number},${number}`;
 
+class TestaustimeUriHandler implements vscode.UriHandler {
+    private testaustime: Testaustime;
+
+    constructor(testaustime: Testaustime) {
+        this.testaustime = testaustime;
+    }
+
+	handleUri(uri: vscode.Uri): vscode.ProviderResult<void> {
+        if (uri.path != "/authorize") return;
+        this.testaustime.updateApikey(uri.query)
+	}
+}
+
 class Testaustime {
     apikey!: string;
+    username!: string;
     endpoint: string;
     config: vscode.WorkspaceConfiguration;
     interval!: NodeJS.Timeout;
@@ -40,13 +54,11 @@ class Testaustime {
             },
         }).then(response => {
             const totalSeconds = response.data.reduce((acc, cur) => acc + cur.duration, 0);
-            this.statusbar.tooltip = `You have coded ${prettyDuration(totalSeconds)} today`;
+            this.statusbar.tooltip = `Username: ${this.username}\nYou have coded ${prettyDuration(totalSeconds)} today`;
             this.statusbar.text = `Testaustime: ${prettyDuration(totalSeconds)} ✅`;
         }).catch(() => {
             this.statusbar.text = "Testaustime: Error";
         });
-        
-        this.statusbar.command = undefined;
     }
 
     data() {
@@ -80,12 +92,30 @@ class Testaustime {
         }).catch(() => null);
     }
 
-    async validateApikey(key: string): Promise<boolean> {
-        return await axios.get(`${this.endpoint}/users/@me`, {
+    async validateApikey(key: string): Promise<MeModel | null> {
+        return await axios.get<MeModel>(`${this.endpoint}/users/@me`, {
             headers: {
                 Authorization: `Bearer ${key}`
             }
-        }).then(() => true).catch(() => false);
+        }).then(res => res.data).catch(() => null);
+    }
+
+    async updateApikey(key: string): Promise<boolean> {
+        const isValid = await this.validateApikey(key);
+
+        if (!isValid) {
+            this.setApikeyInvalidText();
+            vscode.window.showErrorMessage("Invalid API key!");
+            return false;
+        }
+
+        this.username = isValid.username;
+        this.apikey = key;
+        this.apikeyValid = true;
+        this.setActiveText();
+        this.context.globalState.update("apikey", key);
+        vscode.window.showInformationMessage("API key set!");
+        return true;
     }
 
     commands() {
@@ -96,23 +126,28 @@ class Testaustime {
             });
 
             if (result) {
-                const isValid = await this.validateApikey(result);
-
-                if (!isValid) {
-                    this.setApikeyInvalidText();
-                    vscode.window.showErrorMessage("Invalid API key!");
-                    return;
-                }
-
-                this.apikey = result;
-                this.apikeyValid = true;
-                this.setActiveText();
-                this.context.globalState.update("apikey", result);
-                vscode.window.showInformationMessage("API key set!");
+                this.updateApikey(result);   
             }
         });
 
+        const openauthorize = vscode.commands.registerCommand("testaustime.openauthorize", async () => {
+            const url = vscode.Uri.parse('https://testaustime.fi/authorize?editor=vscode');
+            vscode.env.openExternal(url);
+        });
+
+        const openstatusbar = vscode.commands.registerCommand("testaustime.openstatusbar", async () => {
+            let url;
+            if (!this.apikeyValid) {
+                url = vscode.Uri.parse('https://testaustime.fi/authorize?editor=vscode');
+            } else {
+                url = vscode.Uri.parse('https://testaustime.fi');
+            }
+            vscode.env.openExternal(url);
+        });
+
         this.context.subscriptions.push(setapikey);
+        this.context.subscriptions.push(openauthorize);
+        this.context.subscriptions.push(openstatusbar);
     }
 
     async activate() {
@@ -123,11 +158,18 @@ class Testaustime {
         this.statusbar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
         this.setActiveText();
 
-        if (!(await this.validateApikey(this.apikey))) {
+        const isApikeyValid = await this.validateApikey(this.apikey);
+        if (!isApikeyValid) {
             this.apikeyValid = false;
             this.setApikeyInvalidText();
+        } else {
+            this.username = isApikeyValid.username;
         }
+        
+        const uriHandler = new TestaustimeUriHandler(this);
+        this.context.subscriptions.push(vscode.window.registerUriHandler(uriHandler))
 
+        this.statusbar.command = "testaustime.openstatusbar"
         this.statusbar.show();
 
         this.interval = setInterval(() => {
