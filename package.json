@@ -48,11 +48,42 @@
     "commands": [
       {
         "command": "testaustime.setapikey",
-        "title": "Testaustime: Set API key"
+        "title": "Testaustime: Log in manually using API key"
       },
       {
         "command": "testaustime.openauthorize",
-        "title": "Testaustime: Log in using testaustime.fi"
+        "title": "Testaustime: Log in using browser"
+      }
+    ],
+    "walkthroughs": [
+			{
+				"id": "testaustime",
+				"title": "Get Started with Testaustime Visual Studio Code extension",
+				"description": "Log in to the extension and start tracking your coding time",
+				"steps": [
+					{
+						"id": "log-in",
+						"title": "Log In",
+						"description": "You must have a Testaustime account to track your coding time. You can register at https://testaustime.fi/register.\n[Log in with your browser](command:testaustime.openauthorize)\nIf the browser login does not work for you, you can manually retrieve a token from the testaustime.fi settings page and enter it in the add-on:\n[Log in using a token](command:testaustime.setapikey)",
+						"completionEvents": [
+							"onContext:testaustime.apikey"
+						],
+            "media": {
+              "image": "media/hero.png",
+              "altText": "Visual Studio Code editor on left side with extension enabled. Testaustime.fi statistics page on the right."
+            }
+					},
+          {
+						"id": "code",
+						"title": "Code",
+						"description": "Green check mark in status bar indicates that Testaustime is actively tracking your coding session. \nClick on the indicator to open testaustime.fi in your browser.",
+						"completionEvents": [],
+            "media": {
+              "image": "media/hero.png",
+              "altText": "Visual Studio Code editor on left side with extension enabled. Testaustime.fi statistics page on the right."
+            }
+					}
+        ]
       }
     ],
     "configuration": {

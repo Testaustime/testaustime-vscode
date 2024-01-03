@@ -156,15 +156,21 @@ class Testaustime {
         this.commands();
 
         this.statusbar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
-        this.setActiveText();
 
-        const isApikeyValid = await this.validateApikey(this.apikey);
-        if (!isApikeyValid) {
+        if (this.apikey == "") {
+            this.statusbar.text = "Testaustime: Click to Setup";
             this.apikeyValid = false;
-            this.setApikeyInvalidText();
         } else {
-            this.username = isApikeyValid.username;
+            const isApikeyValid = await this.validateApikey(this.apikey);
+            if (!isApikeyValid) {
+                this.apikeyValid = false;
+                this.setApikeyInvalidText();
+            } else {
+                this.username = isApikeyValid.username;
+            }
         }
+
+        this.setActiveText();
         
         const uriHandler = new TestaustimeUriHandler(this);
         this.context.subscriptions.push(vscode.window.registerUriHandler(uriHandler))
