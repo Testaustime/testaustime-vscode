@@ -16,7 +16,10 @@ class TestaustimeUriHandler implements vscode.UriHandler {
 
 	handleUri(uri: vscode.Uri): vscode.ProviderResult<void> {
         if (uri.path != "/authorize") return;
-        this.testaustime.updateApikey(uri.query)
+        const queryParameters = new URLSearchParams(uri.query);
+        const apikey = queryParameters.get('token');
+        if (!apikey) return;
+        this.testaustime.updateApikey(apikey);
 	}
 }
 
