@@ -1,4 +1,5 @@
 **
+!media/
 !dist/**.js
 !icon.png
 !LICENSE
