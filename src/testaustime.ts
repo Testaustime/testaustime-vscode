@@ -43,7 +43,6 @@ class Testaustime {
 
     setApikeyInvalidText() {
         this.statusbar.text = "Testaustime: API key invalid!";
-        this.statusbar.command = "testaustime.setapikey";
     }
 
     setActiveText() {
